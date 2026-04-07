@@ -45,6 +45,9 @@ Varsayılan: 5.00%
 ![Material Based Quality Deviation Report 6](https://github.com/user-attachments/assets/90a72acf-d4d8-414f-a92a-83767db61614)
 ![Material Based Quality Deviation Report7](https://github.com/user-attachments/assets/74827e33-01cf-49bc-b042-bc00e10c2602)
 
+Geliştiren: Mercan Köseoğlu
+Data Analyst & S  ne  demekAP ABAP Consultant
+
 
 
 
