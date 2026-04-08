@@ -1,0 +1,186 @@
+&--A-------------------------------------------------------------------*
+
+REPORT Z_DENEME.
+
+** Malzeme Bazlı Kalite Sapma Raporu
+
+* Amaç: Her malzeme için muayene ve hata oranlarını hesaplayarak
+
+* kritik sapmaları analiz etmek.
+
+*Autor:Mercan KÖSEOĞLU Date:04.11.2025
+
+*-----------------------------------------------------------------------
+
+
+TYPES: BEGIN OF ty_qm,
+
+matnr TYPE matnr, " Malzeme numarası
+
+maktx TYPE maktx, " Malzeme açıklaması
+
+insp_cnt TYPE i, " Muayene sayısı
+
+def_cnt TYPE i, " Hatalı ürün sayısı
+
+def_rate TYPE p DECIMALS 2," Hata oranı (%)
+
+status_txt TYPE char10, " Durum (Normal / Kritik)
+
+END OF ty_qm.
+
+
+DATA: gt_qm TYPE TABLE OF ty_qm,
+
+gs_qm TYPE ty_qm.
+
+
+PARAMETERS: p_thres TYPE p DECIMALS 2 DEFAULT '5.00' OBLIGATORY. " Eşik değer (%)
+
+
+*-----------------------------------------------------------------------
+
+* Ana Program Akışı
+
+*-----------------------------------------------------------------------
+
+START-OF-SELECTION.
+
+PERFORM fill_data.
+
+PERFORM calc_data.
+
+PERFORM show_alv.
+
+
+*-----------------------------------------------------------------------
+
+* Demo veri oluşturma
+
+*-----------------------------------------------------------------------
+
+FORM fill_data.
+
+CLEAR gt_qm.
+
+
+gs_qm-matnr = 'MTR1001'. gs_qm-maktx = 'Motor Bloku'. gs_qm-insp_cnt = 1200. gs_qm-def_cnt = 55. APPEND gs_qm TO gt_qm.
+
+gs_qm-matnr = 'MTR1002'. gs_qm-maktx = 'Fren Diski'. gs_qm-insp_cnt = 800. gs_qm-def_cnt = 8. APPEND gs_qm TO gt_qm.
+
+gs_qm-matnr = 'MTR1003'. gs_qm-maktx = 'Yakit Filtresi'. gs_qm-insp_cnt = 500. gs_qm-def_cnt = 2. APPEND gs_qm TO gt_qm.
+
+gs_qm-matnr = 'MTR1004'. gs_qm-maktx = 'Direksiyon Bağlantısı'.gs_qm-insp_cnt = 650. gs_qm-def_cnt = 40. APPEND gs_qm TO gt_qm.
+
+gs_qm-matnr = 'MTR1005'. gs_qm-maktx = 'Egzoz Manifoldu'. gs_qm-insp_cnt = 700. gs_qm-def_cnt = 60. APPEND gs_qm TO gt_qm.
+
+
+ENDFORM.
+
+
+*-----------------------------------------------------------------------
+
+* Hata oranı hesaplama ve durum belirleme
+
+*-----------------------------------------------------------------------
+
+FORM calc_data.
+
+LOOP AT gt_qm INTO gs_qm.
+
+IF gs_qm-insp_cnt > 0.
+
+gs_qm-def_rate = ( gs_qm-def_cnt * 100 ) / gs_qm-insp_cnt.
+
+ELSE.
+
+gs_qm-def_rate = 0.
+
+ENDIF.
+
+
+IF gs_qm-def_rate > p_thres.
+
+gs_qm-status_txt = 'Kritik'.
+
+ELSE.
+
+gs_qm-status_txt = 'Normal'.
+
+ENDIF.
+
+
+MODIFY gt_qm FROM gs_qm.
+
+ENDLOOP.
+
+ENDFORM.
+
+
+* ALV Görünümü
+
+*-----------------------------------------------------------------------
+
+FORM show_alv.
+
+DATA: lo_alv TYPE REF TO cl_salv_table,
+
+lo_cols TYPE REF TO cl_salv_columns_table.
+
+TRY.
+
+" ALV tablo nesnesi oluştur
+
+CALL METHOD cl_salv_table=>factory
+
+IMPORTING
+
+r_salv_table = lo_alv
+
+CHANGING
+
+t_table = gt_qm.
+
+
+lo_cols = lo_alv->get_columns( ).
+
+" Sütun başlıklarını ayarla
+
+TRY.
+
+lo_cols->get_column( 'MATNR' )->set_short_text( 'Malzeme' ).
+
+lo_cols->get_column( 'MAKTX' )->set_short_text( 'Açıklama' ).
+
+lo_cols->get_column( 'INSP_CNT' )->set_short_text( 'Kontrol' ).
+
+lo_cols->get_column( 'DEF_CNT' )->set_short_text( 'Ret' ).
+
+lo_cols->get_column( 'DEF_RATE' )->set_short_text( 'Ret %' ).
+
+lo_cols->get_column( 'STATUS_TXT' )->set_short_text( 'Durum' ).
+
+CATCH cx_root INTO DATA(lx_col).
+
+" Hata oluşursa programı durdurmadan devam et
+
+" (İstersen buraya log veya bilgi mesajı ekleyebilirsin)
+
+" MESSAGE lx_col->get_text( ) TYPE 'I'.
+
+ENDTRY.
+
+" Görünüm ayarları
+
+lo_alv->get_display_settings( )->set_striped_pattern( abap_true ).
+
+lo_alv->get_display_settings( )->set_list_header( 'Malzeme Bazlı Kalite Sapma Raporu' ).
+
+lo_alv->display( ).
+
+
+CATCH cx_salv_msg INTO DATA(lx_msg).
+
+MESSAGE lx_msg->get_text( ) TYPE 'E'.
+
+ENDTRY.
